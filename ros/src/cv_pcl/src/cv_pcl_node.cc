@@ -28,11 +28,11 @@ int main(int argc, char **argv) {
   im1.at<unsigned char>(1, 2) = 12;
   cv::Mat mask1 = im1 > 0;
 
-  pcl::visualization::PCLVisualizer viewer("viewer");
-  viewer.addCoordinateSystem(3.0, "coor");
-  viewer.initCameraParameters();
-  // viewer.setCameraPosition(0.0, 0.0, 100.0, 0.0, -1.0, 0.0);
-  viewer.setCameraPosition(0.0, 0.0, 100.0, 0.0, 1.0, 0.0);
+//  pcl::visualization::PCLVisualizer viewer("viewer");
+//  viewer.addCoordinateSystem(3.0, "coor");
+//  viewer.initCameraParameters();
+//  // viewer.setCameraPosition(0.0, 0.0, 100.0, 0.0, -1.0, 0.0);
+//  viewer.setCameraPosition(0.0, 0.0, 100.0, 0.0, 1.0, 0.0);
 
   std::string bag_file = argv[1];
   std::string point_topic = "/sensor/velodyne/points";
@@ -43,12 +43,13 @@ int main(int argc, char **argv) {
   rosbag::View::iterator pt_view_it = points_view.begin();
   rosbag::View img_view(bag, rosbag::TopicQuery(img_topic));
   rosbag::View::iterator img_view_it = img_view.begin();
-  while(img_view_it != img_view.end()){
+  while(ros::ok() && img_view_it != img_view.end()){
     auto img_msg = img_view_it->instantiate<sensor_msgs::CompressedImage>();
     auto img = cv::imdecode(cv::Mat(img_msg->data), 1);
     cv::Mat mask = img == 16;
+		std::cout << "tyep is " << mask.channels() << std::endl;
     cv::imshow("tt", mask);
-    cv::waitKey(2);
+    cv::waitKey(0);
   }
 
   // while (pt_view_it != points_view.end()) {
