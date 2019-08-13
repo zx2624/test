@@ -49,7 +49,8 @@ int main(int argc, char **argv) {
     cv::Mat mask = img == 16;
 		std::cout << "tyep is " << mask.channels() << std::endl;
     cv::imshow("tt", mask);
-    cv::waitKey(0);
+    cv::waitKey(2);
+    img_view_it++;
   }
 
   // while (pt_view_it != points_view.end()) {
