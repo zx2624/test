@@ -36,39 +36,46 @@ int main(int argc, char **argv) {
 
   std::string bag_file = argv[1];
   std::string point_topic = "/sensor/velodyne/points";
-  std::string img_topic = "/sensor/hugo1/image1/compressed";
+  std::string img_topic = "/sensor/hugo1/image1/segdet_track/compressed";
   rosbag::Bag bag;
   bag.open(bag_file, rosbag::bagmode::Read);
   rosbag::View points_view(bag, rosbag::TopicQuery(point_topic));
   rosbag::View::iterator pt_view_it = points_view.begin();
   rosbag::View img_view(bag, rosbag::TopicQuery(img_topic));
   rosbag::View::iterator img_view_it = img_view.begin();
-
-  while (pt_view_it != points_view.end()) {
-    auto pt_msg = pt_view_it->instantiate<sensor_msgs::PointCloud2>();
-    pcl::PointCloud<PointType>::Ptr source(new pcl::PointCloud<PointType>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::fromROSMsg(*pt_msg, *source);
-    rgb->points.resize(source->points.size());
-    pcl::PointXYZRGB temp;
-    for(auto pt : source->points){
-        temp.x = pt.x;
-        temp.y = pt.y;
-        temp.z = pt.z;
-
-        temp.r = 255;
-        temp.g = 0;
-        temp.b = 0;
-        rgb->points.push_back(temp);
-    }
-
-    viewer.removePointCloud("cloud");
-    viewer.addPointCloud(rgb, "cloud");
-    viewer.setPointCloudRenderingProperties(
-        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "cloud");
-    viewer.spinOnce(10);
-    pt_view_it++;
+  while(img_view_it != img_view.end()){
+    auto img_msg = img_view_it->instantiate<sensor_msgs::CompressedImage>();
+    auto img = cv::imdecode(cv::Mat(img_msg->data), 1);
+    cv::Mat mask = img == 16;
+    cv::imshow("tt", mask);
+    cv::waitKey(2);
   }
+
+  // while (pt_view_it != points_view.end()) {
+  //   auto pt_msg = pt_view_it->instantiate<sensor_msgs::PointCloud2>();
+  //   pcl::PointCloud<PointType>::Ptr source(new pcl::PointCloud<PointType>);
+  //   pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+  //   pcl::fromROSMsg(*pt_msg, *source);
+  //   rgb->points.resize(source->points.size());
+  //   pcl::PointXYZRGB temp;
+  //   for(auto pt : source->points){
+  //       temp.x = pt.x;
+  //       temp.y = pt.y;
+  //       temp.z = pt.z;
+
+  //       temp.r = 255;
+  //       temp.g = 0;
+  //       temp.b = 0;
+  //       rgb->points.push_back(temp);
+  //   }
+
+  //   viewer.removePointCloud("cloud");
+  //   viewer.addPointCloud(rgb, "cloud");
+  //   viewer.setPointCloudRenderingProperties(
+  //       pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "cloud");
+  //   viewer.spinOnce(10);
+  //   pt_view_it++;
+  // }
 //   while (ros::ok()) {
 //     ros::spinOnce();
 //   }

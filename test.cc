@@ -7,6 +7,7 @@
 #include <vector>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
+#include <set>
 // #include
 enum HobotLabels {
   road = 0,
@@ -32,9 +33,9 @@ int main() {
   str  = str + std::to_string(i);
   std::cout << str << std::endl;
   //0710
-  // double yaw = 3.136455668405159, pitch =  -3.093170131384611, roll = -1.617076826034167;
+  double yaw = 1.5342, pitch =  0.0047, roll = 1.5214;
   //0104
-  double yaw = 1.4330470610715276, pitch =  -1.493158152010737, roll = 0.1380770137450042;
+  // double yaw = 1.4330470610715276, pitch =  -1.493158152010737, roll = 0.1380770137450042;
   Eigen::Matrix3d mat =
       Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
       Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
@@ -49,5 +50,14 @@ int main() {
   int a  = 14;
   if(static_cast<unsigned char>(a) == HobotLabels::moving_object){
     std::cout << "================" << std::endl;
+  }
+  std::set<int> st;
+  st.insert(1);st.insert(2);
+  if(st.find(1) != st.end()){
+    std::cout << "got 1111" << std::endl;
+
+  }
+  if(st.find(3) == st.end()){
+    std::cout << "nnnnnnnnnnnnnn" << std::endl;
   }
 }
