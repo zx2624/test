@@ -58,46 +58,18 @@ int main(int argc, char **argv)
   while (ros::ok() && odom_view_it != odom_view.end())
   {
     auto odom_msg = odom_view_it->instantiate<nav_msgs::Odometry>();
+    if(is_first){
+      is_first = false;
+      init_x = odom_msg->pose.pose.position.x;
+      init_y = odom_msg->pose.pose.position.y;
+      init_z = odom_msg->pose.pose.position.z;
+    }
     nav_msgs::Odometry msg_rpy;
-    msg_rpy.header = odom_msg->header;
+    msg_rpy = *odom_msg;
     msg_rpy.header.frame_id = "velodyne";
-    Eigen::Quaterniond quat;
-    quat.x() = odom_msg->pose.pose.orientation.x;
-    quat.y() = odom_msg->pose.pose.orientation.y;
-    quat.z() = odom_msg->pose.pose.orientation.z;
-    quat.w() = odom_msg->pose.pose.orientation.w;
-    Eigen::Vector3d rpy;
-    rpy = quat.matrix().eulerAngles(2, 1, 0);
-    // std::cout << "msg is " << quat.coeffs() << std::endl;
-    Eigen::Matrix3d mat_rpy =
-        Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitZ()) *
-        Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitX()) *
-        Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitY()).matrix();
-    Eigen::Quaterniond q_rpy(mat_rpy);
-
-    Eigen::Matrix3d mat_wrong =
-        Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitZ()) *
-        Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) *
-        Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitX()).matrix();
-    Eigen::Quaterniond q_wrong(mat_wrong);
-    std::cout << "wrong coeffs : " << q_wrong.coeffs() << std::endl;
-
-
-    msg_rpy.pose.pose.orientation.x = q_rpy.x();
-    msg_rpy.pose.pose.orientation.y = q_rpy.y();
-    msg_rpy.pose.pose.orientation.z = q_rpy.z();
-    msg_rpy.pose.pose.orientation.w = q_rpy.w();
-
-    msg_rpy.pose.pose.position.x = 0;
-    msg_rpy.pose.pose.position.y = 0;
-    msg_rpy.pose.pose.position.z = 0;
-
-    vec_rpy.push_back(msg_rpy);
-
-    msg_rpy.pose.pose.orientation.x = q_wrong.x();
-    msg_rpy.pose.pose.orientation.y = q_wrong.y();
-    msg_rpy.pose.pose.orientation.z = q_wrong.z();
-    msg_rpy.pose.pose.orientation.w = q_wrong.w();
+    msg_rpy.pose.pose.position.x -= init_x;
+    msg_rpy.pose.pose.position.y -= init_y;
+    msg_rpy.pose.pose.position.z -= init_z;
 
 
     vec_wrong.push_back(msg_rpy);
@@ -124,12 +96,11 @@ int main(int argc, char **argv)
   bag.close();
   bag.open(bag_file, rosbag::BagMode::Append);
   std::cout << "--" << std::endl;
-  for (int i = 0; i < vec_rpy.size(); ++i)
+  for (int i = 0; i < vec_wrong.size(); ++i)
   {
-    auto msg_rpy = vec_rpy[i];
     auto msg_wrong = vec_wrong[i];
     // bag.write("/odom_rpy_check", msg_rpy.header.stamp, msg_rpy);
-    bag.write("/odom_rpy_check", msg_rpy.header.stamp, msg_wrong);
+    bag.write(odom_topic + "_rviz", msg_wrong.header.stamp, msg_wrong);
   
   }
   bag.close();
