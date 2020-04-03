@@ -1,8 +1,0 @@
-prefix=/media/horizon_ad/c46ecf39-923d-4758-89d0-26c1d08ae988/zx/test/image_3class/devel
-
-Name: cv_pcl
-Description: Description of cv_pcl
-Version: 0.0.0
-Cflags: 
-Libs: -L/media/horizon_ad/c46ecf39-923d-4758-89d0-26c1d08ae988/zx/test/image_3class/devel/lib 
-Requires: 

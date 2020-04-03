@@ -1,2 +1,0 @@
-cv_pcl
--DCATKIN_DEVEL_PREFIX=/media/horizon_ad/c46ecf39-923d-4758-89d0-26c1d08ae988/zx/test/image_3class/devel -DCMAKE_INSTALL_PREFIX=/media/horizon_ad/c46ecf39-923d-4758-89d0-26c1d08ae988/zx/test/image_3class/install -G Unix Makefiles
