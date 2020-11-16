@@ -35,7 +35,7 @@ catkin_package(
 
 
 
-add_executable(${PROJECT_NAME}_node src/cv_pcl_node.cc)
+add_executable(${PROJECT_NAME}_node src/main.cc)
 
 target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}

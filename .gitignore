@@ -1,2 +1,4 @@
 ros/build/
+image_3class/build
+image_3class/devel
 ros/devel/
