@@ -1,16 +1,26 @@
+#include <ceres/ceres.h>
+#include <pcl/common/transforms.h>
+#include <stdarg.h>
+
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
+#include <chrono>
+#include <ctime>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include <vector>
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Geometry>
+#include <opencv2/opencv.hpp>
 #include <set>
-#include <chrono>
-#include <iomanip>
-#include <boost/algorithm/string.hpp>
+#include <vector>
+
+#include "factor/factor.h"
+#include "testlib.h"
+#include "tools/tools.h"
 using namespace std;
 // #include
 enum HobotLabels {
@@ -31,47 +41,46 @@ enum HobotLabels {
   moving_object = 14,
   background = 15
 };
-int main() {
+struct PointXYZIRPYT
+{
+    PCL_ADD_POINT4D
+    PCL_ADD_INTENSITY;                  // preferred way of adding a XYZ+padding
+    float roll;
+    float pitch;
+    float yaw;
+    double time;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW   // make sure our new allocators are aligned
+} EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment
 
-  //0710
-  double yaw = 3.1415926/2 * 1.3, pitch = 0.2, roll = 0;
-  //0104
-  // double yaw = 1.4330470610715276, pitch =  -1.493158152010737, roll = 0.1380770137450042;
-  Eigen::Matrix3d mat =
-      Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
-      Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()).matrix();
-    
-      				Eigen::Matrix3d delta_mat; delta_mat << 0, -1, 0, 1, 0, 0, 0, 0, 1;
-  std::cout << mat*delta_mat << "   mat " << std::endl;
+POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
+                                   (float, x, x) (float, y, y)
+                                   (float, z, z) (float, intensity, intensity)
+                                   (float, roll, roll) (float, pitch, pitch) (float, yaw, yaw)
+                                   (double, time, time))
+class B;
+class A {
+  friend class B;
 
+ public:
+  A() { std::cout << "empty A" << std::endl; }
 
-  Eigen::Quaterniond q_mat(mat);
-  Eigen::Quaterniond delta_q(delta_mat);
-  std::cout << (q_mat*delta_q).matrix() << std::endl;
-  // q_mat.toRotationMatrix()
-  Eigen::Quaterniond q; q = mat;
+ private:
+  void add() { std::cout << "this is a add in A" << std::endl; }
+};
+class B {
+ public:
+  B() { std::cout << "empty bB" << std::endl; }
 
-  q.w() = 0;
-  q.z() = 0;
-  q.y() = 0;
-  q.x() = 0;
-  
-  std::cout << "w:" << q.w() << " "
-  << "x:" << q.x() << " "
-  << "y:" << q.y() << " "
-  << "z:" << q.z() << std::endl;
-  // std::cout << mat.inverse() << std::endl
-  // << mat.inverse().eval() << std::endl;
-
-  string command = "mkdir -p bddd";
-  system(command.c_str());
-  std::string str = "a/b/cde.bag";
-  std::vector<std::string> str_vec;
-  boost::split(str_vec, str, boost::is_any_of("/."));
-  for(auto s : str_vec){
-    std::cout << s << std::endl;
+ public:
+  void A_add() {
+    std::cout << "got add from A" << std::endl;
+    a.add();
   }
-    // double t = (double)(ms.count() / 1000.0f);
-    // std::cout << t << std::endl;
+  A a;
+};
+
+int main() {
+  PointXYZIRPYT pt;
+  pt.roll = 13;
+  std::cout << pt.roll << std::endl;
 }
