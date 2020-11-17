@@ -43,6 +43,10 @@ Eigen::Matrix4d GetT(const Eigen::Quaterniond& q, const Eigen::Vector3d& t){
   return T;
 }
 
+void GetRPYXYZ(const Eigen::Matrix4d& T, Eigen::Vector3d& rpy, Eigen::Vector3d& xyz){
+  rpy = mat2RPY(T.block<3, 3>(0, 0));
+  xyz = T.block<3, 1>(0, 3);
+}
 // void CRSToDenseMatrix(const ceres::CRSMatrix& input, Eigen::MatrixXd* output) {
 //   CHECK(output != nullptr);
 //   Eigen::MatrixXd& m = *output;

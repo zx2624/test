@@ -17,23 +17,30 @@ with open(logfile) as fs:
     lines = fs.readlines()
     for line in lines:
         if 'rpy' in line:
-            rpy.append([float(line.split()[1]) - 0 * 54, float(line.split()
-                                                                  [2]) - 0 * 54, float(line.split()[3]) - 0 * 54])
+            rpy.append([float(line.split()[1]) * 54, float(line.split()
+                                                           [2]) * 54, float(line.split()[3]) * 54])
         if 'xyz' in line:
-            xyz.append([float(line.split()[1]) - 1, float(line.split()
-                                                                  [2]) - 1, float(line.split()[3]) - 1])                                                          
+            xyz.append([float(line.split()[1]), float(line.split()
+                                                      [2]), float(line.split()[3])])
 dfrpy = pd.DataFrame(rpy)
 dfxyz = pd.DataFrame(xyz)
+begin = 0 
+end = len(rpy)
+if len(sys.argv) > 2:
+    begin = int(sys.argv[2])
+    end = int(sys.argv[3])
 plt.clf()
 for i in range(3):
-    plt.plot(range(len(rpy)), dfrpy[i], color=colour_list[i], label=labels[i], linewidth=1.8)
+    plt.plot(range(end-begin),
+             dfrpy.iloc[begin:end, i], color=colour_list[i], label=labels[i], linewidth=1.8)
     plt.ylim(-3, 3)
-plt.legend(loc=0, ncol=3, borderaxespad=0.)    
+plt.legend(loc=0, ncol=3, borderaxespad=0.)
 plt.savefig(logfile + '_rpy.png')
 
 plt.clf()
 for i in range(3):
-    plt.plot(range(len(rpy)), dfxyz[i], color=colour_list[i], label=labels[i+3], linewidth=1.8)
+    plt.plot(range(end-begin),
+             dfxyz.iloc[begin:end, i], color=colour_list[i], label=labels[i+3], linewidth=1.8)
     plt.ylim(-3, 3)
-plt.legend(loc=0, ncol=3, borderaxespad=0.)    
+plt.legend(loc=0, ncol=3, borderaxespad=0.)
 plt.savefig(logfile + '_xyz.png')
