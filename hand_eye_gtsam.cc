@@ -12,32 +12,50 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <yaml-cpp/yaml.h>
 
 #include "gtsam-factor/prior_pose_cali.h"
 #include "tools/tools.h"
 using namespace std;
 
-int main() {
+int main(int argc, char** argv) {
+
+  YAML::Node yn = YAML::LoadFile(argv[1]);
+  double bigyawrate = yn["bigyawrate"].as<double>();
+  double smallyawrate = yn["smallyawrate"].as<double>();
+  double bigspeed = yn["bigspeed"].as<double>();
+  double smallspeed = yn["smallspeed"].as<double>();
+  double big_dis_noise = yn["big_dis_noise"].as<double>();
+  double small_dis_noise = yn["small_dis_noise"].as<double>();
+  double big_angle_noise = yn["big_angle_noise"].as<double>();
+  double small_angle_noise = yn["small_angle_noise"].as<double>();
+  double frequency = yn["frequency"].as<double>();
+  int scene_size = yn["scene_size"].as<int>();
+  int cali_cnt = yn["cali_cnt"].as<int>();
   std::random_device rd{};
   std::mt19937 gen{rd()};
   std::normal_distribution<double> scene_frame_gen{200, 50};
-  std::normal_distribution<double> scene_change{0., 0.001}; // rad/s 转弯
-  std::normal_distribution<double> scene_change_small{0., 0.001};
-  std::normal_distribution<double> angle_obs{0., 0.0001};
-  std::normal_distribution<double> angle_obs_big{0., 0.03};
 
-  std::normal_distribution<double> dis_obs{0., 0.01};
-  std::normal_distribution<double> dis_obs_big{0., 3};
-  std::normal_distribution<double> velocity{0, 10};
-  std::normal_distribution<double> velocity_small{0, 0.05};
+  // yawrate, speed, noise
+  std::normal_distribution<double> scene_change{0., bigyawrate}; // rad/s 转弯
+  std::normal_distribution<double> scene_change_small{0., smallyawrate};
 
-  for (int itercnt = 0; itercnt < 25; ++itercnt) {
+  std::normal_distribution<double> velocity{0, bigspeed};
+  std::normal_distribution<double> velocity_small{0, smallspeed};
+
+  std::normal_distribution<double> angle_obs{0., small_angle_noise};
+  std::normal_distribution<double> dis_obs{0., small_dis_noise};
+
+  std::normal_distribution<double> angle_obs_big{0., big_angle_noise};
+  std::normal_distribution<double> dis_obs_big{0., big_dis_noise};
+
+  for (int itercnt = 0; itercnt < cali_cnt; ++itercnt) {
     Eigen::Vector3d gyr(0.0, 0.00, 0);
     Eigen::Vector3d vel(15, 0, 0);
 
     Eigen::Vector3d tic(1, 1, 1);
     Eigen::Quaterniond qci(1, 0, 0, 0);
-    { qci = tools::RPY2mat(0.2, 0.3, 1.2); }
+    { qci = tools::RPY2mat(0.2, 0.3, 1.57); }
     Eigen::Quaterniond qic = qci.inverse();
     Eigen::Vector3d rpy_ini = tools::mat2RPY(qci.toRotationMatrix());
     Eigen::Matrix4d Tic = tools::GetT(qic, tic);
@@ -45,18 +63,18 @@ int main() {
     std::normal_distribution<double> init_p_noise{0, 0.1};
     std::normal_distribution<double> init_y_noise{0, 0.2};
     std::normal_distribution<double> init_xyz_noise{0, 1};
-    Eigen::Quaterniond qic_op(
+    Eigen::Quaterniond qic_init(
         tools::RPY2mat(0.2 + init_r_noise(gen), -0.3 + init_p_noise(gen),
                        -1.2 + init_y_noise(gen))); //(1, 0, 0, 0);
-    Eigen::Vector3d tic_op(init_xyz_noise(gen), init_xyz_noise(gen),
+    Eigen::Vector3d tic_init(init_xyz_noise(gen), init_xyz_noise(gen),
                            init_xyz_noise(gen)); //(0, 0, 0);
 
-    // Eigen::Quaterniond qic_op = qic;
-    // Eigen::Vector3d tic_op = tic;
-    gtsam::Rot3 rot_ic(qic_op);
-    gtsam::Pose3 pose_ic(rot_ic, tic_op);
-    // gtsam::Pose3 pose_ic(Tic);
-    // std::cout << "begin \n" << pose_ic.matrix() << std::endl;
+    // Eigen::Quaterniond qic_init = qic;
+    // Eigen::Vector3d tic_init = tic;
+    gtsam::Rot3 rot_ic_init(qic_init);
+    gtsam::Pose3 pose_ic_init(rot_ic_init, tic_init);
+    // gtsam::Pose3 pose_ic_init(Tic);
+    // std::cout << "begin \n" << pose_ic_init.matrix() << std::endl;
 
     // isam
     gtsam::ISAM2Params isam_params;
@@ -66,8 +84,6 @@ int main() {
     gtsam::ISAM2 isam(isam_params);
 
     gtsam::NonlinearFactorGraph gtSAMgraph;
-    double frequency = 0.1;
-    int scene_size = 20;
     gtsam::Values initialEstimate;
     Eigen::Matrix4d Tc0 = Eigen::Matrix4d::Identity();
     std::ofstream ofs_truth("truth" + std::to_string(itercnt) + ".txt");
@@ -98,7 +114,8 @@ int main() {
       dT.block<3, 3>(0, 0) = tools::RPY2mat(drpy(0), drpy(1), drpy(2));
       dT.block<3, 1>(0, 3) = dxyz;
       int frame_per_scene = int(scene_frame_gen(gen));
-      if(frame_per_scene < 0) continue;
+      if (frame_per_scene < 0)
+        continue;
       for (int frame = 0; frame < frame_per_scene; ++frame) {
         index++;
         Eigen::Matrix4d Tc1 = Tc0 * dT;
@@ -139,11 +156,14 @@ int main() {
 
         gtsam::noiseModel::Diagonal::shared_ptr odometryNoise =
             gtsam::noiseModel::Diagonal::Variances(
-                (gtsam::Vector(6) << 1e-8, 1e-8, 1e-8, 1e-4, 1e-4, 1e-4)
+                (gtsam::Vector(6) << pow(small_angle_noise, 2),
+                 pow(small_angle_noise, 2), pow(small_angle_noise, 2),
+                 pow(small_dis_noise, 2), pow(small_dis_noise, 2),
+                 pow(small_dis_noise, 2))
                     .finished());
         gtSAMgraph.add(gtsam::BetweenFactor<gtsam::Pose3>(
-            gtsam::Symbol('p', index), gtsam::Symbol('p', index + 1), between_pose,
-            odometryNoise));
+            gtsam::Symbol('p', index), gtsam::Symbol('p', index + 1),
+            between_pose, odometryNoise));
 
         Eigen::Vector3d rpy0_noise;
         Eigen::Vector3d rpy1_noise;
@@ -151,22 +171,27 @@ int main() {
         Eigen::Vector3d t1_noise;
         { // imu pose measure
           Eigen::Vector3d rpy0 = tools::mat2RPY(Ti0.block<3, 3>(0, 0));
-          rpy0_noise = rpy0 + Eigen::Vector3d(angle_obs_big(gen), angle_obs_big(gen),
-                                              angle_obs_big(gen));
+          rpy0_noise =
+              rpy0 + Eigen::Vector3d(angle_obs_big(gen), angle_obs_big(gen),
+                                     angle_obs_big(gen));
           Eigen::Vector3d rpy1 = tools::mat2RPY(Ti1.block<3, 3>(0, 0));
-          rpy1_noise = rpy1 + Eigen::Vector3d(angle_obs_big(gen), angle_obs_big(gen),
-                                              angle_obs_big(gen));
+          rpy1_noise =
+              rpy1 + Eigen::Vector3d(angle_obs_big(gen), angle_obs_big(gen),
+                                     angle_obs_big(gen));
           Eigen::Vector3d t0 = Ti0.block<3, 1>(0, 3);
-          t0_noise =
-              t0 + Eigen::Vector3d(dis_obs_big(gen), dis_obs_big(gen), dis_obs_big(gen));
+          t0_noise = t0 + Eigen::Vector3d(dis_obs_big(gen), dis_obs_big(gen),
+                                          dis_obs_big(gen));
           Eigen::Vector3d t1 = Ti1.block<3, 1>(0, 3);
-          t1_noise =
-              t1 + Eigen::Vector3d(dis_obs_big(gen), dis_obs_big(gen), dis_obs(gen));
+          t1_noise = t1 + Eigen::Vector3d(dis_obs_big(gen), dis_obs_big(gen),
+                                          dis_obs(gen));
         }
         gtsam::noiseModel::Diagonal::shared_ptr prior_noise =
             gtsam::noiseModel::Diagonal::Variances(
-                (gtsam::Vector(6) << 9e-4, 9e-4, 9e-4, 25, 25, 25)
-                    .finished());        
+                (gtsam::Vector(6) << pow(big_angle_noise, 2),
+                 pow(big_angle_noise, 2), pow(big_angle_noise, 2),
+                 pow(big_dis_noise, 2), pow(big_dis_noise, 2),
+                 pow(big_dis_noise, 2))
+                    .finished());
         if (index == 0) {
           gtsam::Rot3 rot(
               tools::RPY2mat(rpy0_noise(0), rpy0_noise(1), rpy0_noise(2)));
@@ -182,8 +207,9 @@ int main() {
           dT.block<3, 3>(0, 0) =
               tools::RPY2mat(rpy_noise(0), rpy_noise(1), rpy_noise(2));
           dT.block<3, 1>(0, 3) = t_noise;
-          initialEstimate.insert(gtsam::Symbol('p', index), gtsam::Pose3(Tc0 * dT));
-          initialEstimate.insert(gtsam::Symbol('c', 0), pose_ic);
+          initialEstimate.insert(gtsam::Symbol('p', index),
+                                 gtsam::Pose3(Tc0 * dT));
+          initialEstimate.insert(gtsam::Symbol('c', 0), pose_ic_init);
         }
         gtsam::Rot3 rot(
             tools::RPY2mat(rpy1_noise(0), rpy1_noise(1), rpy1_noise(2)));
@@ -215,13 +241,14 @@ int main() {
           gtSAMgraph.resize(0);
           initialEstimate.clear();
           auto result = isam.calculateEstimate();
-          auto T_ci_op = result.at<gtsam::Pose3>(gtsam::Symbol('c', 0)).matrix().inverse();
+          auto T_ci_op =
+              result.at<gtsam::Pose3>(gtsam::Symbol('c', 0)).matrix().inverse();
           Eigen::Matrix4d mat_diff = T_ci_op.inverse() * Tic.inverse();
           Eigen::Vector3d rpy_diff = tools::mat2RPY(mat_diff.block<3, 3>(0, 0));
-          // std::cout << "rpy: " << rpy_diff(0) << " " << rpy_diff(1) << " "
-          //           << rpy_diff(2) << " " << std::endl;
-          // std::cout << "xyz: " << mat_diff(0, 3) << " " << mat_diff(1, 3) << " "
-          //           << mat_diff(2, 3) << std::endl;
+          std::cout << "rpy: " << rpy_diff(0) << " " << rpy_diff(1) << " "
+                    << rpy_diff(2) << " " << std::endl;
+          std::cout << "xyz: " << mat_diff(0, 3) << " " << mat_diff(1, 3) << " "
+                    << mat_diff(2, 3) << std::endl;
           for (int j = index - 9; j < index + 1; ++j) {
             auto Tj = result.at<gtsam::Pose3>(gtsam::Symbol('p', j)).matrix();
             Eigen::Vector3d rpy, xyz;
@@ -234,18 +261,18 @@ int main() {
         Tc0 = Tc1;
       }
     }
-    ofs_init.close();
-    ofs_truth.close();
-    ofs_op.close();
-    auto result = isam.calculateEstimate();
-    auto T_ci_op =
-        result.at<gtsam::Pose3>(gtsam::Symbol('c', 0)).matrix().inverse();
-    Eigen::Matrix4d mat_diff = T_ci_op.inverse() * Tic.inverse();
-    Eigen::Vector3d rpy_diff = tools::mat2RPY(mat_diff.block<3, 3>(0, 0));
-    std::cout << "rpy: " << rpy_diff(0) << " " << rpy_diff(1) << " "
-              << rpy_diff(2) << " " << std::endl;
-    std::cout << "xyz: " << mat_diff(0, 3) << " " << mat_diff(1, 3) << " "
-              << mat_diff(2, 3) << std::endl;
+    // ofs_init.close();
+    // ofs_truth.close();
+    // ofs_op.close();
+    // auto result = isam.calculateEstimate();
+    // auto T_ci_op =
+    //     result.at<gtsam::Pose3>(gtsam::Symbol('c', 0)).matrix().inverse();
+    // Eigen::Matrix4d mat_diff = T_ci_op.inverse() * Tic.inverse();
+    // Eigen::Vector3d rpy_diff = tools::mat2RPY(mat_diff.block<3, 3>(0, 0));
+    // std::cout << "rpy: " << rpy_diff(0) << " " << rpy_diff(1) << " "
+    //           << rpy_diff(2) << " " << std::endl;
+    // std::cout << "xyz: " << mat_diff(0, 3) << " " << mat_diff(1, 3) << " "
+    //           << mat_diff(2, 3) << std::endl;
     // gtsam::Values result =
     //     gtsam::LevenbergMarquardtOptimizer(gtSAMgraph, initialEstimate)
     //         .optimize();

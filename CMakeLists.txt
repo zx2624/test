@@ -24,7 +24,7 @@ target_link_libraries(tt ${OpenCV_LIBRARIES} testlib ${PCL_LIBRARIES} ${CERES_LI
 add_library(prior_pose_cali SHARED  prior_pose_cali.cc)
 target_link_libraries(prior_pose_cali gtsam)
 add_executable(hand_eye_gtsam hand_eye_gtsam.cc)
-target_link_libraries(hand_eye_gtsam ${OpenCV_LIBRARIES}  ${PCL_LIBRARIES} ${CERES_LIBRARIES} -lgtsam prior_pose_cali)
+target_link_libraries(hand_eye_gtsam ${OpenCV_LIBRARIES}  ${PCL_LIBRARIES} ${CERES_LIBRARIES} -lgtsam prior_pose_cali yaml-cpp)
 
 add_executable(can_imu_handeye can_imu_handeye_simu.cc)
 target_link_libraries(can_imu_handeye ${OpenCV_LIBRARIES} testlib ${PCL_LIBRARIES} ${CERES_LIBRARIES})
