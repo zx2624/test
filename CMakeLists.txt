@@ -29,9 +29,3 @@ target_link_libraries(hand_eye_gtsam ${OpenCV_LIBRARIES}  ${PCL_LIBRARIES} ${CER
 add_executable(can_imu_handeye can_imu_handeye_simu.cc)
 target_link_libraries(can_imu_handeye ${OpenCV_LIBRARIES} testlib ${PCL_LIBRARIES} ${CERES_LIBRARIES})
 
-add_executable(from_lidar from_lidar.cc)
-target_link_libraries(from_lidar yaml-cpp ${OpenCV_LIBRARIES} jsoncpp)
-
-add_executable(from_front from_front.cc)
-target_link_libraries(from_front yaml-cpp ${OpenCV_LIBRARIES} jsoncpp)
-
